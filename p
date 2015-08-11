@@ -107,7 +107,7 @@ encdb () {
     tar --preserve-permissions -C "$PASS_HOME_DIRNAME" -c "$PASS_HOME_BASENAME" | \
     gpg --encrypt -r "$PASSWORD_STORE_KEY" > "$ENCRYPTED_FILENAME" || exit 1
   else
-    echo -e "Password-store folder doesn\`t exist, check config"
+    echo -e "Password-store folder does not exist, check config"
     exit 1
   fi
 }
@@ -116,7 +116,7 @@ backup () {
   if [[ -f "$ENCRYPTED_FILENAME" ]]; then
     cp "$ENCRYPTED_FILENAME" "$BACKUPDIR"/"${PASS_HOME_BASENAME}_$DATE.tar.gpg" || exit 1
   else
-    echo -e "Encrypted database doesn\`t exist, run \"$PROGRAM_ABS encdb\" command fisrt"
+    echo -e "Encrypted database does not exist, run \"$PROGRAM_ABS encdb\" command fisrt"
     exit 1
   fi
 }
@@ -126,7 +126,7 @@ tarcmd () {
     tar --preserve-permissions -C "$TMPDIR" --remove-files -c "$PASS_HOME_BASENAME" | \
     gpg --encrypt -r "$PASSWORD_STORE_KEY" > "$ENCRYPTED_FILENAME" || exit 1
   else
-    echo "Unpacked dir doesn\`t exist"
+    echo -e "Unpacked dir does not exist"
     exit 1
   fi
 }
@@ -135,7 +135,7 @@ untarcmd () {
   if [[ -f "$ENCRYPTED_FILENAME" ]]; then
     gpg -d "$ENCRYPTED_FILENAME" | tar -x --preserve-permissions -C "$TMPDIR"/ || exit 1
   else
-    echo -e "Encrypted database doesn\`t exist, run \"$PROGRAM_ABS encdb\" command fisrt"
+    echo -e "Encrypted database does not exist, run \"$PROGRAM_ABS encdb\" command fisrt"
     exit 1
   fi
 }
