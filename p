@@ -26,7 +26,7 @@ EDITOR_X='gedit'
 EDITOR_CONSOLE='nano'
 
 # rofi and dmenu defaults
-rofi_cmd='rofi -dmenu -bg #222222 -fg #ffffff -hlbg #222222 -hlfg #11dd11 -opacity 90 -lines 20 -width -35 -levenshtein-sort -p pass:'
+rofi_cmd='rofi -dmenu -bg #222222 -fg #ffffff -hlbg #222222 -hlfg #11dd11 -opacity 90 -lines 20 -width -35 -no-levenshtein-sort -disable-history -p pass:'
 dmenu_cmd='dmenu -l 20 -b -nb #222222 -nf #ffffff -sb #222222 -sf #11dd11'
 
 # Terminal emulator, not usable yet
@@ -214,7 +214,7 @@ case $1 in
       password_files=( "$PASSWORD_STORE_DIR"/**/*.gpg )
       password_files=( "${password_files[@]#$PASSWORD_STORE_DIR/}" )
       password_files=( "${password_files[@]%.gpg}" )
-      password=$(printf '%s\n' "${password_files[@]}" | $menu "$@")
+      password=$(printf '%s\n' "${password_files[@]}" | sort -f | $menu "$@")
       "$PROGRAM_ABS" close
 
       [[ -n $password ]] || exit
