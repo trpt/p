@@ -36,8 +36,10 @@ dmenu or rofi action parameters:
 `p d -e`  
 `p r s`
 
-# Dependencies
-rofi or dmenu
-zenity
-xdotool
+# Dependencies  
+rofi or dmenu  
+zenity  
+xdotool  
 some other basic commandlne tools
+
+Tested in Arch Linux
