@@ -32,15 +32,15 @@ dmenu_cmd='dmenu -l 20 -b -nb #222222 -nf #ffffff -sb #222222 -sf #11dd11'
 # Terminal emulator, not usable yet
 # TERMEMU='sakura -x'
 
-# You usually don`t need to edit anything below this line #
+# You usually don't need to edit anything below this line #
 ###########################################################
 TMPDIR='/dev/shm'
-PASS_HOME_BASENAME=`basename $PASS_HOME`
-PASS_HOME_DIRNAME=`dirname $PASS_HOME`
+PASS_HOME_BASENAME="$(basename $PASS_HOME)"
+PASS_HOME_DIRNAME="$(dirname $PASS_HOME)"
 PASS_HOME_UNPACKED="$TMPDIR/$PASS_HOME_BASENAME"
 ENCRYPTED_FILENAME="$PASS_HOME_DIRNAME/$PASS_HOME_BASENAME.tar.gpg"
 PASSWORD_STORE_DIR="$PASS_HOME"
-DATE=`date +%Y-%m-%d-%Hh`
+DATE="$(date +%Y-%m-%d-%Hh)"
 PROGRAM="${0##*/}"
 PROGRAM_ABS="$SCR/$PROGRAM"
 BACKUPDIR="$PASS_HOME_DIRNAME"
@@ -148,7 +148,7 @@ deldb () {
 case $1 in
     encdb | e)
       encdb && \
-      echo -e " $ENCRYPTED_FILENAME created \n You can delete $PASS_HOME folder now" || \
+      echo -e " $ENCRYPTED_FILENAME created \n You can backup and delete $PASS_HOME folder now" || \
       echo "Could not create database, check config in source of $PROGRAM_ABS"
     ;;
 
@@ -166,7 +166,7 @@ case $1 in
     ;;
 
     gen | g)
-      newentry=`zenity  --title "New password" --entry --text= || exit 1`
+      newentry=$(zenity  --title "New password" --entry --text= || exit 1)
       [[ -n $newentry ]] && "$PROGRAM_ABS" generate "$GENOPTS" "$newentry" $GENLEN &>/dev/null
     ;;
 
