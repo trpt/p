@@ -3,7 +3,7 @@ password-store wrapper with encrypted directory tree support
 shares some code from passmenu and possibly other scripts :)
 
 # Config and encrypt existing database
-You can find and edit config variables insdie the script. Basically you only need to edit PASSWORD_STORE_KEY variable if other settings were default ones. Other config entries are self-explanatory I hope. You can name this script whatewer you want and it is probably a good idea to put in PATH.
+You can find and edit config variables insdie the script. Basically you only need to edit PASSWORD_STORE_KEY variable if other settings were default ones. Other config entries are self-explanatory I hope. You can name this script whatever you want and it is probably a good idea to put in PATH.
 
 Then you should create encrypted pass DB with command  
 `p encdb`
@@ -36,10 +36,10 @@ dmenu or rofi action parameters:
 `p d -e`  
 `p r s`
 
-# Dependencies  
+# Additional dependencies  
 rofi or dmenu  
 zenity  
 xdotool  
-some other basic commandlne tools
+some other basic commandline tools
 
 Tested in Arch Linux
