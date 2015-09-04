@@ -25,9 +25,16 @@ GENLEN='28'
 EDITOR_X='gedit'
 EDITOR_CONSOLE='nano'
 
-# rofi and dmenu defaults
-rofi_cmd='rofi -dmenu -bg #222222 -fg #ffffff -hlbg #222222 -hlfg #11dd11 -opacity 90 -lines 20 -width -35 -no-levenshtein-sort -disable-history -p pass:'
-dmenu_cmd='dmenu -l 20 -b -nb #222222 -nf #ffffff -sb #222222 -sf #11dd11'
+# apps defaults
+rofi_cmd () {
+rofi -dmenu -bg \#222222 -fg \#ffffff -hlbg \#222222 -hlfg \#11dd11 -opacity 90 -lines 20 -width -35 -no-levenshtein-sort -disable-history -p pass: -mesg "$rofi_mesg"
+}
+
+dmenu_cmd () {
+dmenu -l 20 -b -nb \#222222 -nf \#ffffff -sb \#222222 -sf \#11dd11 $@
+}
+
+zenity_size="--width=500 --height=300"
 
 # Terminal emulator, not usable yet
 # TERMEMU='sakura -x'
@@ -46,11 +53,11 @@ PROGRAM_ABS="$SCR/$PROGRAM"
 BACKUPDIR="$PASS_HOME_DIRNAME"
 [[ -n $DISPLAY && $XDG_VTNR -eq 1 ]] && export EDITOR="$EDITOR_X" || export EDITOR="$EDITOR_CONSOLE"
 
-# I use non breaking whitesapces here due to weird rofi behavior
-rofi_show_mesg='-mesg <b>Show password</b>'
-rofi_type_mesg='-mesg <b>Type password</b>'
-rofi_edit_mesg='-mesg <b>Edit password</b>'
-rofi_del_mesg='-mesg <b>Delete password</b>'
+rofi_default_mesg='<b>Copy pass to clipboard</b>'
+rofi_show_mesg='<b>Show password</b>'
+rofi_type_mesg='<b>Type password</b>'
+rofi_edit_mesg='<b>Edit password</b>'
+rofi_del_mesg='<b>Delete password</b>'
 
 usage() {
   cat <<EOF
@@ -103,6 +110,10 @@ fi
 
 encdb () {
   if [[ -d "$PASS_HOME" ]]; then
+    if [[ -f "$ENCRYPTED_FILENAME" ]]; then
+      echo "File $ENCRYPTED_FILENAME exists, aborting..."
+      exit 1
+    fi
     chmod -R go-rwx "$PASS_HOME" && \
     tar --preserve-permissions -C "$PASS_HOME_DIRNAME" -c "$PASS_HOME_BASENAME" | \
     gpg --encrypt -r "$PASSWORD_STORE_KEY" > "$ENCRYPTED_FILENAME" || exit 1
@@ -172,9 +183,10 @@ case $1 in
 
     rofi | dmenu | r | d)
       if [[ $1 == "rofi" || $1 == "r" ]]; then
-        menu="$rofi_cmd"
+        menu="rofi_cmd"
+        rofi_mesg=$rofi_default_mesg
       elif [[ $1 == "dmenu" || $1 == "d" ]]; then
-        menu="$dmenu_cmd"
+        menu="dmenu_cmd"
       fi
       shopt -s nullglob globstar
       export PASSWORD_STORE_DIR="$PASS_HOME_UNPACKED"
@@ -186,27 +198,27 @@ case $1 in
 
       if [[ $1 == "--type" || $1 == "-t" || $1 == "t" ]]; then
         typeit=1
-        [[ $menu == $rofi_cmd ]] && menu="$menu $rofi_type_mesg"
+        [[ $menu == rofi_cmd ]] && rofi_mesg="$rofi_type_mesg"
         shift
       fi
 
       if [[ $1 == "--show" || $1 == "-s" || $1 == "s" ]]; then
         showit=1
-        [[ $menu == $rofi_cmd ]] && menu="$menu $rofi_show_mesg"
+        [[ $menu == rofi_cmd ]] && rofi_mesg="$rofi_show_mesg"
         shift
       fi
 
       if [[ $1 == "--edit" || $1 == "-e" || $1 == "e" ]]; then
         #notify-send pass "You are about to edit password entry"
         editit=1
-        [[ $menu == $rofi_cmd ]] && menu="$menu $rofi_edit_mesg"
+        [[ $menu == rofi_cmd ]] && rofi_mesg="$rofi_edit_mesg"
         shift
       fi
 
       if [[ $1 == "--del" || $1 == "-d" || $1 == "d" ]]; then
         notify-send pass "You are about to remove password entry! This cannot be undone" -h string:sound-name:message-new-email
         delit=1
-        [[ $menu == $rofi_cmd ]] && menu="$menu $rofi_del_mesg"
+        [[ $menu == rofi_cmd ]] && rofi_mesg="$rofi_del_mesg"
         shift
       fi
 
@@ -226,7 +238,7 @@ case $1 in
         awk 'BEGIN{ORS=""} {print; exit}' |
         xdotool type --clearmodifiers --file -
       elif [[ $showit -eq 1 ]]; then
-        "$PROGRAM_ABS" show "$password" | zenity --text-info --title="$password"
+        "$PROGRAM_ABS" show "$password" | zenity $zenity_size --text-info --title="$password"
       elif [[ $editit -eq 1 ]]; then
         "$PROGRAM_ABS" edit "$password"
       elif [[ $delit -eq 1 ]]; then
