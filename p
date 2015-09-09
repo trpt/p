@@ -25,9 +25,13 @@ GENLEN='28'
 EDITOR_X='gedit'
 EDITOR_CONSOLE='nano'
 
+# Uncomment to use experimental minimal zenity editor
+EDITOR_X="zenity_editor"
+
 # apps defaults
+
 rofi_cmd () {
-rofi -dmenu -bg \#222222 -fg \#ffffff -hlbg \#222222 -hlfg \#11dd11 -opacity 90 -lines 20 -width -35 -no-levenshtein-sort -disable-history -p pass: -mesg "$rofi_mesg"
+rofi -dmenu -i -bg \#222222 -fg \#ffffff -hlbg \#222222 -hlfg \#11dd11 -opacity 90 -lines 20 -width -35 -no-levenshtein-sort -disable-history -p pass: -mesg "$rofi_mesg"
 }
 
 dmenu_cmd () {
@@ -64,7 +68,7 @@ usage() {
 
 password-store wrapper by Trepet
 
-usage: $PROGRAM action
+usage: $PROGRAM [action]
 
   action:
     encdb, e - encrypt existing password-store directory
@@ -108,46 +112,54 @@ if [[ $1 = @(-h|--help) ]]; then
   exit $(( $# ? 0 : 1 ))
 fi
 
+die() {
+	echo "$@" >&2
+	exit 1
+}
+
+zenity_editor () {
+  local pass_tmpf="$@"
+  local new_pass=$(zenity --text-info --editable --filename="$pass_tmpf")
+  echo -e "$new_pass" > "$pass_tmpf"
+}
+
+export -f zenity_editor
+
 encdb () {
   if [[ -d "$PASS_HOME" ]]; then
     if [[ -f "$ENCRYPTED_FILENAME" ]]; then
-      echo "File $ENCRYPTED_FILENAME exists, aborting..."
-      exit 1
+      die "File $ENCRYPTED_FILENAME exists, aborting..."
     fi
     chmod -R go-rwx "$PASS_HOME" && \
     tar --preserve-permissions -C "$PASS_HOME_DIRNAME" -c "$PASS_HOME_BASENAME" | \
-    gpg --encrypt -r "$PASSWORD_STORE_KEY" > "$ENCRYPTED_FILENAME" || exit 1
+    gpg --encrypt -r "$PASSWORD_STORE_KEY" > "$ENCRYPTED_FILENAME" || die "Error"
   else
-    echo -e "Password-store folder does not exist, check config"
-    exit 1
+    die "Password-store folder does not exist, check config"
   fi
 }
 
 backup () {
   if [[ -f "$ENCRYPTED_FILENAME" ]]; then
-    cp "$ENCRYPTED_FILENAME" "$BACKUPDIR"/"${PASS_HOME_BASENAME}_$DATE.tar.gpg" || exit 1
+    cp "$ENCRYPTED_FILENAME" "$BACKUPDIR"/"${PASS_HOME_BASENAME}_$DATE.tar.gpg" || die "Error"
   else
-    echo -e "Encrypted database does not exist, run \"$PROGRAM_ABS encdb\" command fisrt"
-    exit 1
+    die "Encrypted database does not exist, run \"$PROGRAM_ABS encdb\" command fisrt"
   fi
 }
 
 tarcmd () {
   if [[ -d "$PASS_HOME_UNPACKED" ]]; then
     tar --preserve-permissions -C "$TMPDIR" --remove-files -c "$PASS_HOME_BASENAME" | \
-    gpg --encrypt -r "$PASSWORD_STORE_KEY" > "$ENCRYPTED_FILENAME" || exit 1
+    gpg --encrypt -r "$PASSWORD_STORE_KEY" > "$ENCRYPTED_FILENAME" || die "Error"
   else
-    echo -e "Unpacked dir does not exist"
-    exit 1
+    die "Unpacked dir does not exist"
   fi
 }
 
 untarcmd () {
   if [[ -f "$ENCRYPTED_FILENAME" ]]; then
-    gpg -d "$ENCRYPTED_FILENAME" | tar -x --preserve-permissions -C "$TMPDIR"/ || exit 1
+    gpg -d "$ENCRYPTED_FILENAME" | tar -x --preserve-permissions -C "$TMPDIR"/ || die "Error"
   else
-    echo -e "Encrypted database does not exist, run \"$PROGRAM_ABS encdb\" command fisrt"
-    exit 1
+    die "Encrypted database does not exist, run \"$PROGRAM_ABS encdb\" command fisrt"
   fi
 }
 
@@ -157,103 +169,103 @@ deldb () {
 }
 
 case $1 in
-    encdb | e)
-      encdb && \
-      echo -e " $ENCRYPTED_FILENAME created \n You can backup and delete $PASS_HOME folder now" || \
-      echo "Could not create database, check config in source of $PROGRAM_ABS"
-    ;;
+  encdb | e)
+    encdb && \
+    echo -e " $ENCRYPTED_FILENAME created \n You can backup and delete $PASS_HOME folder now" || \
+    die "Could not create database, check config in source of $PROGRAM_ABS"
+  ;;
 
-    backup | b)
-      backup && \
-      echo -e " $BACKUPDIR/${PASS_HOME_BASENAME}_$DATE.tar.gpg created"
-    ;;
+  backup | b)
+    backup && \
+    echo -e " $BACKUPDIR/${PASS_HOME_BASENAME}_$DATE.tar.gpg created"
+  ;;
 
-    open | o)
-      untarcmd
-    ;;
+  open | o)
+    untarcmd
+  ;;
 
-    close | c)
-      tarcmd
-    ;;
+  close | c)
+    tarcmd
+  ;;
 
-    gen | g)
-      newentry=$(zenity  --title "New password" --entry --text= || exit 1)
-      [[ -n $newentry ]] && "$PROGRAM_ABS" generate "$GENOPTS" "$newentry" $GENLEN &>/dev/null
-    ;;
+  gen | g)
+    newentry=$(zenity  --title "New password" --entry --text= || exit 1)
+    [[ -n $newentry ]] && "$PROGRAM_ABS" generate "$GENOPTS" "$newentry" $GENLEN &>/dev/null
+  ;;
 
-    rofi | dmenu | r | d)
-      if [[ $1 == "rofi" || $1 == "r" ]]; then
-        menu="rofi_cmd"
-        rofi_mesg=$rofi_default_mesg
-      elif [[ $1 == "dmenu" || $1 == "d" ]]; then
-        menu="dmenu_cmd"
-      fi
-      shopt -s nullglob globstar
-      export PASSWORD_STORE_DIR="$PASS_HOME_UNPACKED"
-      typeit=0
-      showit=0
-      editit=0
-      delit=0
+  rofi | dmenu | r | d)
+    if [[ $1 == "rofi" || $1 == "r" ]]; then
+      menu="rofi_cmd"
+      rofi_mesg=$rofi_default_mesg
+    elif [[ $1 == "dmenu" || $1 == "d" ]]; then
+      menu="dmenu_cmd"
+    fi
+    shopt -s nullglob globstar
+    export PASSWORD_STORE_DIR="$PASS_HOME_UNPACKED"
+    typeit=0
+    showit=0
+    editit=0
+    delit=0
+    shift
+
+    if [[ $1 == "--type" || $1 == "-t" || $1 == "t" ]]; then
+      typeit=1
+      [[ $menu == rofi_cmd ]] && rofi_mesg="$rofi_type_mesg"
       shift
+    fi
 
-      if [[ $1 == "--type" || $1 == "-t" || $1 == "t" ]]; then
-        typeit=1
-        [[ $menu == rofi_cmd ]] && rofi_mesg="$rofi_type_mesg"
-        shift
-      fi
+    if [[ $1 == "--show" || $1 == "-s" || $1 == "s" ]]; then
+      showit=1
+      [[ $menu == rofi_cmd ]] && rofi_mesg="$rofi_show_mesg"
+      shift
+    fi
 
-      if [[ $1 == "--show" || $1 == "-s" || $1 == "s" ]]; then
-        showit=1
-        [[ $menu == rofi_cmd ]] && rofi_mesg="$rofi_show_mesg"
-        shift
-      fi
+    if [[ $1 == "--edit" || $1 == "-e" || $1 == "e" ]]; then
+      #notify-send pass "You are about to edit password entry"
+      editit=1
+      [[ $menu == rofi_cmd ]] && rofi_mesg="$rofi_edit_mesg"
+      shift
+    fi
 
-      if [[ $1 == "--edit" || $1 == "-e" || $1 == "e" ]]; then
-        #notify-send pass "You are about to edit password entry"
-        editit=1
-        [[ $menu == rofi_cmd ]] && rofi_mesg="$rofi_edit_mesg"
-        shift
-      fi
+    if [[ $1 == "--del" || $1 == "-d" || $1 == "d" ]]; then
+      notify-send pass "You are about to remove password entry! This cannot be undone" -h string:sound-name:message-new-email
+      delit=1
+      [[ $menu == rofi_cmd ]] && rofi_mesg="$rofi_del_mesg"
+      shift
+    fi
 
-      if [[ $1 == "--del" || $1 == "-d" || $1 == "d" ]]; then
-        notify-send pass "You are about to remove password entry! This cannot be undone" -h string:sound-name:message-new-email
-        delit=1
-        [[ $menu == rofi_cmd ]] && rofi_mesg="$rofi_del_mesg"
-        shift
-      fi
+    "$PROGRAM_ABS" open
+    password_files=( "$PASSWORD_STORE_DIR"/**/*.gpg )
+    password_files=( "${password_files[@]#$PASSWORD_STORE_DIR/}" )
+    password_files=( "${password_files[@]%.gpg}" )
+    password=$(printf '%s\n' "${password_files[@]}" | sort -f | $menu "$@")
+    "$PROGRAM_ABS" close
 
-      "$PROGRAM_ABS" open
-      password_files=( "$PASSWORD_STORE_DIR"/**/*.gpg )
-      password_files=( "${password_files[@]#$PASSWORD_STORE_DIR/}" )
-      password_files=( "${password_files[@]%.gpg}" )
-      password=$(printf '%s\n' "${password_files[@]}" | sort -f | $menu "$@")
-      "$PROGRAM_ABS" close
+    [[ -n $password ]] || exit
 
-      [[ -n $password ]] || exit
+    if [[ $typeit -eq 0 && $showit -eq 0 && $editit -eq 0 && $delit -eq 0 ]]; then
+      "$PROGRAM_ABS" show -c "$password" 2>/dev/null
+    elif [[ $typeit -eq 1 ]] ;then
+      "$PROGRAM_ABS" show "$password" |
+      awk 'BEGIN{ORS=""} {print; exit}' |
+      xdotool type --clearmodifiers --file -
+    elif [[ $showit -eq 1 ]]; then
+      "$PROGRAM_ABS" show "$password" | zenity $zenity_size --text-info --title="$password"
+    elif [[ $editit -eq 1 ]]; then
+      "$PROGRAM_ABS" edit "$password"
+    elif [[ $delit -eq 1 ]]; then
+      "$PROGRAM_ABS" rm -f "$password" &>/dev/null
+    fi
+  ;;
 
-      if [[ $typeit -eq 0 && $showit -eq 0 && $editit -eq 0 && $delit -eq 0 ]]; then
-        "$PROGRAM_ABS" show -c "$password" 2>/dev/null
-      elif [[ $typeit -eq 1 ]] ;then
-        "$PROGRAM_ABS" show "$password" |
-        awk 'BEGIN{ORS=""} {print; exit}' |
-        xdotool type --clearmodifiers --file -
-      elif [[ $showit -eq 1 ]]; then
-        "$PROGRAM_ABS" show "$password" | zenity $zenity_size --text-info --title="$password"
-      elif [[ $editit -eq 1 ]]; then
-        "$PROGRAM_ABS" edit "$password"
-      elif [[ $delit -eq 1 ]]; then
-        "$PROGRAM_ABS" rm -f "$password" &>/dev/null
-      fi
-    ;;
-
-    *)
-      export PASSWORD_STORE_DIR="$PASS_HOME_UNPACKED"
-      if [[ ! -d "$PASS_HOME_UNPACKED" ]]; then
-        untarcmd
-        pass $@ && tarcmd || deldb
-      else
-        pass $@
-        echo -e "Database not saved yet! Save it by \"$PROGRAM_ABS close\"."
-      fi
-    ;;
+  *)
+    export PASSWORD_STORE_DIR="$PASS_HOME_UNPACKED"
+    if [[ ! -d "$PASS_HOME_UNPACKED" ]]; then
+      untarcmd
+      pass $@ && tarcmd || deldb
+    else
+      pass $@
+      echo -e "Database not saved yet! Save it by \"$PROGRAM_ABS close\"."
+    fi
+  ;;
 esac
