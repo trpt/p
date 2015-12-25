@@ -9,8 +9,9 @@ SCR="$( cd "$(dirname "$0")" ; pwd -P )"
 # GPG keys and config homedir, e.g. "$HOME/.gnupg"
 GNUPGHOME="$HOME/.gnupg"
 
-# Location of pass folder tree, e.g. "$HOME/.password-store"
-PASS_HOME="$HOME/.password-store"
+# Path to encrypted database, will be created if not exists
+# It MUST end with .tar.gpg extension
+ENCRYPTED_FILENAME="$HOME/pass/db.tar.gpg"
 
 # GPG encryption key(s)
 PASSWORD_STORE_KEY='0xXXXXXXXX'
@@ -31,14 +32,14 @@ EDITOR_X="zenity_editor"
 # apps defaults
 
 rofi_cmd () {
-rofi -dmenu -i -bg \#222222 -fg \#ffffff -hlbg \#222222 -hlfg \#11dd11 -opacity 90 -lines 20 -width -35 -no-levenshtein-sort -disable-history -p pass: -mesg "$rofi_mesg"
+rofi -dmenu -i -bg \#222222 -fg \#ffffff -hlbg \#222222 -hlfg \#11dd11 -opacity 90 -lines 15 -width -40 -font "mono 16" -no-levenshtein-sort -disable-history -p pass: -mesg "$rofi_mesg"
 }
 
 dmenu_cmd () {
 dmenu -l 20 -b -nb \#222222 -nf \#ffffff -sb \#222222 -sf \#11dd11 $@
 }
 
-zenity_size="--width=500 --height=300"
+zenity_size="--width=600 --height=400"
 
 # Terminal emulator, not usable yet
 # TERMEMU='sakura -x'
@@ -46,16 +47,18 @@ zenity_size="--width=500 --height=300"
 # You usually don't need to edit anything below this line #
 ###########################################################
 TMPDIR='/dev/shm'
-PASS_HOME_BASENAME="$(basename $PASS_HOME)"
-PASS_HOME_DIRNAME="$(dirname $PASS_HOME)"
+PASS_HOME_REALBASENAME="$(basename $ENCRYPTED_FILENAME)"
+PASS_HOME_BASENAME="${PASS_HOME_REALBASENAME%.tar.gpg}"
+PASS_HOME_DIRNAME="$(dirname $ENCRYPTED_FILENAME)"
 PASS_HOME_UNPACKED="$TMPDIR/$PASS_HOME_BASENAME"
-ENCRYPTED_FILENAME="$PASS_HOME_DIRNAME/$PASS_HOME_BASENAME.tar.gpg"
-PASSWORD_STORE_DIR="$PASS_HOME"
 DATE="$(date +%Y-%m-%d-%Hh)"
 PROGRAM="${0##*/}"
 PROGRAM_ABS="$SCR/$PROGRAM"
 BACKUPDIR="$PASS_HOME_DIRNAME"
-[[ -n $DISPLAY && $XDG_VTNR -eq 1 ]] && export EDITOR="$EDITOR_X" || export EDITOR="$EDITOR_CONSOLE"
+[[ -n $DISPLAY && $XDG_VTNR -eq 1 ]] && INX=yes
+[[ -n $INX && $(command -v zenity) ]] && ZENEX=yes
+
+[[ -n $INX ]] && export EDITOR="$EDITOR_X" || export EDITOR="$EDITOR_CONSOLE"
 
 rofi_default_mesg='<b>Copy pass to clipboard</b>'
 rofi_show_mesg='<b>Show password</b>'
@@ -71,13 +74,12 @@ password-store wrapper by Trepet
 usage: $PROGRAM [action]
 
   action:
-    encdb, e - encrypt existing password-store directory
     backup, b - backup existing encrypted database
     open, o - decrypt database and extract it to $PASS_HOME_UNPACKED
     close, c - encrypt database at $PASS_HOME_UNPACKED and save it to $ENCRYPTED_FILENAME
     dmenu, d - use dmenu to list, choose password and copy it to clipboard
     rofi, r - use rofi to list, choose password and copy it to clipboard
-    gen, g - generate pass using zenity as prompt for new entry
+    gen, g - generate pass of $GENLEN characters using zenity as prompt for new entry
 
   dmenu or rofi action parameters:
     --type, -t, t - use xdotool to autotype password
@@ -107,36 +109,28 @@ usage: $PROGRAM [action]
 EOF
 }
 
-if [[ $1 = @(-h|--help) ]]; then
+if [[ $1 = @(-h|--help|-?) ]]; then
   usage
   exit $(( $# ? 0 : 1 ))
 fi
 
 die() {
-	echo "$@" >&2
-	exit 1
+  if [[ -n $ZENEX ]]; then
+    zenity --error --no-markup --text "$@"
+    exit 1
+  else
+    echo "$@" >&2
+    exit 1
+  fi
 }
 
 zenity_editor () {
   local pass_tmpf="$@"
-  local new_pass=$(zenity --text-info --editable --filename="$pass_tmpf")
-  echo -e "$new_pass" > "$pass_tmpf"
+  local new_pass=$(zenity --text-info --editable --width=600 --height=400 --filename="$pass_tmpf" || echo pass_wrapper_zenity_editor_cancel) # :)
+  [[ $new_pass != 'pass_wrapper_zenity_editor_cancel' ]] && echo -e "$new_pass" > "$pass_tmpf"
 }
 
 export -f zenity_editor
-
-encdb () {
-  if [[ -d "$PASS_HOME" ]]; then
-    if [[ -f "$ENCRYPTED_FILENAME" ]]; then
-      die "File $ENCRYPTED_FILENAME exists, aborting..."
-    fi
-    chmod -R go-rwx "$PASS_HOME" && \
-    tar --preserve-permissions -C "$PASS_HOME_DIRNAME" -c "$PASS_HOME_BASENAME" | \
-    gpg --encrypt -r "$PASSWORD_STORE_KEY" > "$ENCRYPTED_FILENAME" || die "Error"
-  else
-    die "Password-store folder does not exist, check config"
-  fi
-}
 
 backup () {
   if [[ -f "$ENCRYPTED_FILENAME" ]]; then
@@ -159,7 +153,7 @@ untarcmd () {
   if [[ -f "$ENCRYPTED_FILENAME" ]]; then
     gpg -d "$ENCRYPTED_FILENAME" | tar -x --preserve-permissions -C "$TMPDIR"/ || die "Error"
   else
-    die "Encrypted database does not exist, run \"$PROGRAM_ABS encdb\" command fisrt"
+    die "Encrypted database does not exist"
   fi
 }
 
@@ -168,12 +162,18 @@ deldb () {
   echo "No changes made"
 }
 
+newdb () {
+  NEWDIR=${ENCRYPTED_FILENAME%.tar.gpg}
+  [[ ! -d "$NEWDIR" ]] && mkdir -p "$NEWDIR" || die "$NEWDIR folder exists"
+  echo "$PASSWORD_STORE_KEY" > "$NEWDIR/.gpg-id"
+  chmod -R go-rwx "$NEWDIR" && \
+  tar --preserve-permissions -C "$PASS_HOME_DIRNAME" -c "$(basename $NEWDIR)" | \
+  gpg --encrypt -r "$PASSWORD_STORE_KEY" > "$ENCRYPTED_FILENAME" || die "Error"
+  rm --recursive "$NEWDIR" && \
+  echo "$ENCRYPTED_FILENAME created. You should add some passwords now"
+}
+
 case $1 in
-  encdb | e)
-    encdb && \
-    echo -e " $ENCRYPTED_FILENAME created \n You can backup and delete $PASS_HOME folder now" || \
-    die "Could not create database, check config in source of $PROGRAM_ABS"
-  ;;
 
   backup | b)
     backup && \
@@ -189,8 +189,10 @@ case $1 in
   ;;
 
   gen | g)
-    newentry=$(zenity  --title "New password" --entry --text= || exit 1)
+    newentry=$(zenity  --title "New password" --entry --text=)
+    [[ $? -eq 1 ]] && exit 1
     [[ -n $newentry ]] && "$PROGRAM_ABS" generate "$GENOPTS" "$newentry" $GENLEN &>/dev/null
+    notify-send pass "Pass of $GENLEN length generated: $newentry" -h string:sound-name:message-new-email
   ;;
 
   rofi | dmenu | r | d)
@@ -255,17 +257,22 @@ case $1 in
       "$PROGRAM_ABS" edit "$password"
     elif [[ $delit -eq 1 ]]; then
       "$PROGRAM_ABS" rm -f "$password" &>/dev/null
+      notify-send pass "Password $password deleted"
     fi
   ;;
 
   *)
-    export PASSWORD_STORE_DIR="$PASS_HOME_UNPACKED"
-    if [[ ! -d "$PASS_HOME_UNPACKED" ]]; then
-      untarcmd
-      pass $@ && tarcmd || deldb
+    if [[ -f $ENCRYPTED_FILENAME ]]; then
+      export PASSWORD_STORE_DIR="$PASS_HOME_UNPACKED"
+      if [[ ! -d "$PASS_HOME_UNPACKED" ]]; then
+        untarcmd
+        pass $@ && tarcmd || deldb
+      else
+        pass $@
+        echo -e "Database not saved yet! Save it by \"$PROGRAM_ABS close\"."
+      fi
     else
-      pass $@
-      echo -e "Database not saved yet! Save it by \"$PROGRAM_ABS close\"."
+      newdb
     fi
   ;;
 esac
