@@ -189,8 +189,7 @@ case $1 in
   ;;
 
   gen | g)
-    newentry=$(zenity  --title "New password" --entry --text=)
-    [[ $? -eq 1 ]] && exit 1
+    newentry=$(zenity  --title "New password" --entry --text="No spaces in names") || exit 1
     [[ -n $newentry ]] && "$PROGRAM_ABS" generate "$GENOPTS" "$newentry" $GENLEN &>/dev/null
     notify-send pass "Pass of $GENLEN length generated: $newentry" -h string:sound-name:message-new-email
   ;;
