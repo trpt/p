@@ -25,7 +25,8 @@ where `action` is:
 `close`, `c` - encrypt database at $PASS_HOME_UNPACKED and save it to $ENCRYPTED_FILENAME  
 `dmenu`, `d` - use dmenu to list, choose password and copy it to clipboard  
 `rofi`, `r` - use rofi to list, choose password and copy it to clipboard  
-`gen`, `g` - generate pass using zenity as prompt for new entry
+`gen`, `g` - generate pass using zenity as prompt for new entry  
+`menu` - show menu for action
 
 dmenu or rofi action parameters:  
 `--type`, `-t`, `t` - use xdotool to autotype password  
@@ -41,12 +42,12 @@ dmenu or rofi action parameters:
 `p r s`
 
 # Additional dependencies  
+bash >= v.4  
 rofi or dmenu  
 zenity  
-xdotool  
-some other basic commandline tools
+xte or xdotool
 
 # Additional notes
-Wrapper may have some limitations. Particularly in git and other advanced functions, as I never used it.
+Wrapper may have some limitations, particularly in git, as I never used it.
 
 Tested in Arch Linux
