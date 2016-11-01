@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # pass wrapper by Trepet
-# v. 2.0
+# v. 2.01
 # © GPLv3
 
 # Path to the app, do not edit, use $SCR below to make program portable !experimental!
@@ -24,10 +24,11 @@ GENOPTS='--no-symbols'
 GENLEN='28'
 
 # Path to editor apps
+CUSTOM_EDITOR='yes'
 EDITOR_X='gedit'
 EDITOR_CONSOLE='nano'
 
-# Uncomment to use minimal zenity editor
+# Use minimal zenity editor instead of usual
 EDITOR_X="zenity_editor"
 
 # Explicit choice of language, 'ru' and 'en' supported
@@ -64,8 +65,8 @@ BACKUPDIR="$PASS_HOME_DIRNAME"
 [[ -n $DISPLAY ]] && INX=yes
 [[ -n $INX && $(command -v zenity) ]] && ZENEX=yes
 
-if [[ $custom_editor = 'yes' ]]; then
-  [[ -n $INX ]] && export EDITOR="$editor_x" || export EDITOR="$editor_console"
+if [[ $CUSTOM_EDITOR = 'yes' ]]; then
+  [[ -n $INX ]] && export EDITOR="$EDITOR_X" || export EDITOR="$EDITOR_CONSOLE"
 fi
 
 translate() {
