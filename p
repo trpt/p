@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # pass wrapper by Trepet
-# v. 2.01
+# v. 2.1
 # © GPLv3
 
 # Path to the app, do not edit, use $SCR below to make program portable !experimental!
@@ -72,9 +72,9 @@ fi
 translate() {
   [[ -z $lang ]] && lang=${LANG:0:2}
 
-  declare -A tr_en=([title]='pass wrapper' [rofi_default_mesg]='<b>Copy pass to clipboard</b>' [rofi_show_mesg]='<b>Show password</b>' [rofi_type_mesg]='<b>Type password</b>' [rofi_edit_mesg]='<b>Edit password</b>' [rofi_del_mesg]='<b>Delete password</b>' [no_display]='No DISPLAY found' [zenity_req]='Zenity is required to run this command' [d_r_req]='dmenu or rofi is required to run this command' [bck_fail]="Encrypted database does not exist, run this command first:" [unp_dir_fail]='Unpacked dir does not exist' [enc_db_fail]='Encrypted database does not exist' [no_changes]='No changes made' [error]='Error' [newdir_fail]="Folder exists:" [newdb_created]="created. You should add some passwords now" [what_todo]='What to do?' [choose]='Choose' [action]="Action" [type]='Type' [show]='Show' [edit]='Edit' [add]='Add' [delete]='Delete' [bck_created]="created" [new_password]='New password' [no_spaces]='No spaces in names' [pass_generated]="Pass of $GENLEN length generated:" [del_pass_msg]='You are about to unrecoverably remove password entry!' [xdt_xte_req]='xte or xdotool needed' [pass_deleted]="deleted" [db_unencrypted]='Database is unencrypted! Save it by')
+  declare -A tr_en=([title]='pass wrapper' [rofi_default_mesg]='<b>Copy pass to clipboard</b>' [rofi_show_mesg]='<b>Show password</b>' [rofi_type_mesg]='<b>Type password</b>' [rofi_edit_mesg]='<b>Edit password</b>' [rofi_del_mesg]='<b>Delete password</b>' [no_display]='No DISPLAY found' [pass_req]='password-store required to run this app' [zenity_req]='Zenity is required to run this command' [d_r_req]='dmenu or rofi is required to run this command' [bck_fail]="Encrypted database does not exist, run this command first:" [unp_dir_fail]='Unpacked dir does not exist' [enc_db_fail]='Encrypted database does not exist' [no_changes]='No changes made' [error]='Error' [newdir_fail]="Folder exists:" [newdb_created]="created. You should add some passwords now" [what_todo]='What to do?' [choose]='Choose' [action]="Action" [type]='Type' [show]='Show' [edit]='Edit' [add]='Add' [delete]='Delete' [make_bck]="Backup" [bck_created]="created" [new_password]='New password' [no_spaces]='No spaces in names' [pass_generated]="Pass of $GENLEN length generated:" [del_pass_msg]='You are about to unrecoverably remove password entry!' [xdt_xte_req]='xte or xdotool needed' [pass_deleted]="deleted" [db_unencrypted]='Database is unencrypted! Save it by')
 
-  declare -A tr_ru=([title]='Оболочка pass' [rofi_default_mesg]='<b>Скопировать пароль в буфер</b>' [rofi_show_mesg]='<b>Показать пароль</b>' [rofi_type_mesg]='<b>Напечатать пароль</b>' [rofi_edit_mesg]='<b>Редактировать пароль</b>' [rofi_del_mesg]='<b>Удалить пароль</b>' [no_display]='Переменная DISPLAY не задана' [zenity_req]='Для этой команды нужна программа Zenity' [d_r_req]='Для этой команды нужна программа dmenu или rofi' [bck_fail]="Шифрованная БД еще не создана, запустите сначала команду" [unp_dir_fail]='Распакованной директории не существует' [enc_db_fail]='Шифрованной БД не существует' [no_changes]='Изменений не было' [error]='Ошибка' [newdir_fail]="Директория существует:" [newdb_created]="создан. Теперь можно добавлять пароли" [what_todo]='Что нужно сделать?' [choose]='Выбор' [action]="Действие" [type]='Напечатать' [show]='Показать' [edit]='Редактировать' [add]='Добавить' [delete]='Удалить' [bck_created]="создан" [new_password]='Новый пароль' [no_spaces]='Без пробелов в именах' [pass_generated]="Пароль длиной $GENLEN сгенерирован:" [del_pass_msg]='Вы собираетесь безвозвратно удалить запись с паролем!' [xdt_xte_req]='Нужна программа xte или xdotool' [pass_deleted]="удален" [db_unencrypted]='БД расшифрована! Сохраните ее командой')
+  declare -A tr_ru=([title]='Оболочка pass' [rofi_default_mesg]='<b>Скопировать пароль в буфер</b>' [rofi_show_mesg]='<b>Показать пароль</b>' [rofi_type_mesg]='<b>Напечатать пароль</b>' [rofi_edit_mesg]='<b>Редактировать пароль</b>' [rofi_del_mesg]='<b>Удалить пароль</b>' [no_display]='Переменная DISPLAY не задана' [pass_req]='Необходима программа password-store' [zenity_req]='Для этой команды нужна программа Zenity' [d_r_req]='Для этой команды нужна программа dmenu или rofi' [bck_fail]="Шифрованная БД еще не создана, запустите сначала команду" [unp_dir_fail]='Распакованной директории не существует' [enc_db_fail]='Шифрованной БД не существует' [no_changes]='Изменений не было' [error]='Ошибка' [newdir_fail]="Директория существует:" [newdb_created]="создан. Теперь можно добавлять пароли" [what_todo]='Что нужно сделать?' [choose]='Выбор' [action]="Действие" [type]='Напечатать' [show]='Показать' [edit]='Редактировать' [add]='Добавить' [delete]='Удалить' [make_bck]="Резервная копия" [bck_created]="создан" [new_password]='Новый пароль' [no_spaces]='Без пробелов в именах' [pass_generated]="Пароль длиной $GENLEN сгенерирован:" [del_pass_msg]='Вы собираетесь безвозвратно удалить запись с паролем!' [xdt_xte_req]='Нужна программа xte или xdotool' [pass_deleted]="удален" [db_unencrypted]='БД расшифрована! Сохраните ее командой')
 
   case $lang in
   ru)
@@ -145,6 +145,8 @@ die() {
   fi
 }
 
+[[ $(command -v pass) || $(command -v password-store) ]] || die "$(translate pass_req)"
+
 check_x() {
   [[ $INX = 'yes' ]] || die "$(translate no_display)"
   [[ $ZENEX != 'yes' && $check_zenity = 'yes' ]] && die "$(translate zenity_req)"
@@ -207,7 +209,7 @@ newdb () {
 if [[ $1 = 'menu' ]]; then
   check_zenity='yes' check_x
 
-  ask=$(zenity $zenity_ask_size --list  --hide-header --text="$(translate what_todo)" --title "$(translate title)" --radiolist  --column "$(translate choose)" --column "$(translate action)" TRUE "$(translate type)" FALSE "$(translate show)" FALSE "$(translate add)" FALSE "$(translate edit)" FALSE "$(translate delete)")
+  ask=$(zenity $zenity_ask_size --list  --hide-header --text="$(translate what_todo)" --title "$(translate title)" --radiolist  --column "$(translate choose)" --column "$(translate action)" TRUE "$(translate type)" FALSE "$(translate show)" FALSE "$(translate add)" FALSE "$(translate edit)" FALSE "$(translate delete)" FALSE "$(translate make_bck)")
 
   case $ask in
   "$(translate type)")
@@ -228,6 +230,11 @@ if [[ $1 = 'menu' ]]; then
 
   "$(translate delete)")
     set $menu --del
+  ;;
+  
+  "$(translate make_bck)")
+    backup && \
+    notify-send pass "$BACKUPDIR/${PASS_HOME_BASENAME}_$DATE.tar.gpg $(translate bck_created)" --icon=dialog-information
   ;;
 
   *)
@@ -341,4 +348,3 @@ case $1 in
     fi
   ;;
 esac
-
