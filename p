@@ -1,35 +1,40 @@
 #!/bin/bash
 
 # pass wrapper by Trepet
-# v. 2.1
+# v. 2.7
 # © GPLv3
 
-# Path to the app, do not edit, use $SCR below to make program portable !experimental!
+# Path to the app, do not edit ##########
 SCR="$( cd "$(dirname "$0")" ; pwd -P )"
+PROGRAM="${0##*/}"
+PROGRAM_ABS="$SCR/$PROGRAM"
+#########################################
 
-# GPG keys and config homedir, e.g. "$HOME/.gnupg"
+# GPG keys and config homedir
 GNUPGHOME="$HOME/.gnupg"
-
-# Path to encrypted database, will be created if not exists
-# It MUST end with .tar.gpg extension
-ENCRYPTED_FILENAME="$HOME/pass/db.tar.gpg"
 
 # GPG encryption key(s)
 PASSWORD_STORE_KEY='XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
 
+# Database name
+dbname='db'
+
+# Database and backup storage directory. It will be created if not exists
+dbdir="$HOME/.pass"
+
 # Options to password generation, check pass help
-GENOPTS='--no-symbols'
+genopts='--no-symbols'
 
 # Password length when generating
-GENLEN='28'
+genlen='28'
 
 # Path to editor apps
-CUSTOM_EDITOR='yes'
-EDITOR_X='gedit'
-EDITOR_CONSOLE='nano'
+custom_editor='yes'
+editor_x='gedit'
+editor_console='nano'
 
 # Use minimal zenity editor instead of usual
-EDITOR_X="zenity_editor"
+editor_x="zenity_editor"
 
 # Explicit choice of language, 'ru' and 'en' supported
 #lang='ru'
@@ -49,32 +54,36 @@ dmenu_cmd () {
 }
 
 zenity_size="--width=600 --height=400"
-zenity_ask_size="--height=300 "
+zenity_ask_size="--height=340 "
 
 # You usually don't need to edit anything below this line #
 ###########################################################
-TMPDIR='/dev/shm'
-PASS_HOME_REALBASENAME="$(basename $ENCRYPTED_FILENAME)"
-PASS_HOME_BASENAME="${PASS_HOME_REALBASENAME%.tar.gpg}"
-PASS_HOME_DIRNAME="$(dirname $ENCRYPTED_FILENAME)"
-PASS_HOME_UNPACKED="$TMPDIR/$PASS_HOME_BASENAME"
-DATE="$(date +%Y-%m-%d-%Hh)"
-PROGRAM="${0##*/}"
-PROGRAM_ABS="$SCR/$PROGRAM"
-BACKUPDIR="$PASS_HOME_DIRNAME"
-[[ -n $DISPLAY ]] && INX=yes
-[[ -n $INX && $(command -v zenity) ]] && ZENEX=yes
 
-if [[ $CUSTOM_EDITOR = 'yes' ]]; then
-  [[ -n $INX ]] && export EDITOR="$EDITOR_X" || export EDITOR="$EDITOR_CONSOLE"
+# Dir to unpack database. It SHOULD be in RAM
+tmpdir='/dev/shm'
+
+# Delete trailing slashes in dbdir
+dbdir=$(echo "$dbdir" | sed 's:/*$::')
+
+encrypted_filename="$dbname.tar.gpg"
+encrypted_fullpath="$dbdir/$encrypted_filename"
+pass_home_unpacked="$tmpdir/$dbname"
+curdate="$(date +%Y-%m-%d-%Hh)"
+backupdir="$dbdir"
+lockfile="$tmpdir/.$dbname-passlock"
+[[ -n $DISPLAY ]] && in_x='yes'
+[[ -n $in_x && $(command -v zenity) ]] && zen_x=yes
+
+if [[ $custom_editor = 'yes' ]]; then
+  [[ -n $in_x ]] && export EDITOR="$editor_x" || export EDITOR="$editor_console"
 fi
 
 translate() {
   [[ -z $lang ]] && lang=${LANG:0:2}
 
-  declare -A tr_en=([title]='pass wrapper' [rofi_default_mesg]='<b>Copy pass to clipboard</b>' [rofi_show_mesg]='<b>Show password</b>' [rofi_type_mesg]='<b>Type password</b>' [rofi_edit_mesg]='<b>Edit password</b>' [rofi_del_mesg]='<b>Delete password</b>' [no_display]='No DISPLAY found' [pass_req]='password-store required to run this app' [zenity_req]='Zenity is required to run this command' [d_r_req]='dmenu or rofi is required to run this command' [bck_fail]="Encrypted database does not exist, run this command first:" [unp_dir_fail]='Unpacked dir does not exist' [enc_db_fail]='Encrypted database does not exist' [no_changes]='No changes made' [error]='Error' [newdir_fail]="Folder exists:" [newdb_created]="created. You should add some passwords now" [what_todo]='What to do?' [choose]='Choose' [action]="Action" [type]='Type' [show]='Show' [edit]='Edit' [add]='Add' [delete]='Delete' [make_bck]="Backup" [bck_created]="created" [new_password]='New password' [no_spaces]='No spaces in names' [pass_generated]="Pass of $GENLEN length generated:" [del_pass_msg]='You are about to unrecoverably remove password entry!' [xdt_xte_req]='xte or xdotool needed' [pass_deleted]="deleted" [db_unencrypted]='Database is unencrypted! Save it by')
+  declare -A tr_en=([title]='pass wrapper' [pass_running]='pass is running, please wait...' [rofi_default_mesg]='<b>Copy pass to clipboard</b>' [rofi_show_mesg]='<b>Show password</b>' [rofi_type_mesg]='<b>Type password</b>' [rofi_edit_mesg]='<b>Edit password</b>' [rofi_del_mesg]='<b>Delete password</b>' [no_display]='No DISPLAY found' [pass_req]='password-store required to run this app' [zenity_req]='Zenity is required to run this command' [d_r_req]='dmenu or rofi is required to run this command' [bck_fail]="Encrypted database does not exist, run this command first:" [unp_dir_fail]='Unpacked dir does not exist' [enc_db_fail]='Encrypted database does not exist' [no_changes]='No changes made' [error]='Error' [newdir_fail]="Folder exists:" [newdb_created]="created. You should add some passwords now" [what_todo]='What to do?' [choose]='Choose' [action]="Action" [type]='Type' [show]='Show' [edit]='Edit' [add]='Add' [delete]='Delete' [make_bck]="Backup" [bck_created]="created" [new_password]='New password' [no_spaces]='No spaces in names' [pass_generated]="Pass of $genlen length generated:" [del_pass_msg]='You are about to unrecoverably remove password entry!' [xdt_xte_req]='xte or xdotool needed' [pass_deleted]="deleted" [db_unencrypted]='Database is unencrypted! Save it by' [lock_error]="Complete all previous operations or remove file $lockfile" [newentry_exist]='Entry already exists' [search]='Search' [search_password]='Search password' [search_entry]='Search entry' [search_result]='Search result')
 
-  declare -A tr_ru=([title]='Оболочка pass' [rofi_default_mesg]='<b>Скопировать пароль в буфер</b>' [rofi_show_mesg]='<b>Показать пароль</b>' [rofi_type_mesg]='<b>Напечатать пароль</b>' [rofi_edit_mesg]='<b>Редактировать пароль</b>' [rofi_del_mesg]='<b>Удалить пароль</b>' [no_display]='Переменная DISPLAY не задана' [pass_req]='Необходима программа password-store' [zenity_req]='Для этой команды нужна программа Zenity' [d_r_req]='Для этой команды нужна программа dmenu или rofi' [bck_fail]="Шифрованная БД еще не создана, запустите сначала команду" [unp_dir_fail]='Распакованной директории не существует' [enc_db_fail]='Шифрованной БД не существует' [no_changes]='Изменений не было' [error]='Ошибка' [newdir_fail]="Директория существует:" [newdb_created]="создан. Теперь можно добавлять пароли" [what_todo]='Что нужно сделать?' [choose]='Выбор' [action]="Действие" [type]='Напечатать' [show]='Показать' [edit]='Редактировать' [add]='Добавить' [delete]='Удалить' [make_bck]="Резервная копия" [bck_created]="создан" [new_password]='Новый пароль' [no_spaces]='Без пробелов в именах' [pass_generated]="Пароль длиной $GENLEN сгенерирован:" [del_pass_msg]='Вы собираетесь безвозвратно удалить запись с паролем!' [xdt_xte_req]='Нужна программа xte или xdotool' [pass_deleted]="удален" [db_unencrypted]='БД расшифрована! Сохраните ее командой')
+  declare -A tr_ru=([title]='Оболочка pass' [pass_running]='pass работает, ждите...' [rofi_default_mesg]='<b>Скопировать пароль в буфер</b>' [rofi_show_mesg]='<b>Показать пароль</b>' [rofi_type_mesg]='<b>Напечатать пароль</b>' [rofi_edit_mesg]='<b>Редактировать пароль</b>' [rofi_del_mesg]='<b>Удалить пароль</b>' [no_display]='Переменная DISPLAY не задана' [pass_req]='Необходима программа password-store' [zenity_req]='Для этой команды нужна программа Zenity' [d_r_req]='Для этой команды нужна программа dmenu или rofi' [bck_fail]="Шифрованная БД еще не создана, запустите сначала команду" [unp_dir_fail]='Распакованной директории не существует' [enc_db_fail]='Шифрованной БД не существует' [no_changes]='Изменений не было' [error]='Ошибка' [newdir_fail]="Директория существует:" [newdb_created]="создан. Теперь можно добавлять пароли" [what_todo]='Что нужно сделать?' [choose]='Выбор' [action]="Действие" [type]='Напечатать' [show]='Показать' [edit]='Редактировать' [add]='Добавить' [delete]='Удалить' [make_bck]="Резервная копия" [bck_created]="создан" [new_password]='Новый пароль' [no_spaces]='Без пробелов в именах' [pass_generated]="Пароль длиной $genlen сгенерирован:" [del_pass_msg]='Вы собираетесь безвозвратно удалить запись с паролем!' [xdt_xte_req]='Нужна программа xte или xdotool' [pass_deleted]="удален" [db_unencrypted]='БД расшифрована! Сохраните ее командой' [lock_error]="Закончите все текущие операции с БД или удалите файл $lockfile" [newentry_exist]='Такая запись уже существует' [search]='Поиск' [search_password]='Поиск пароля' [search_entry]='Строка поиска' [search_result]='Результат поиска')
 
   case $lang in
   ru)
@@ -95,18 +104,19 @@ usage: $PROGRAM [action]
 
   action:
     backup, b - backup existing encrypted database
-    open, o - decrypt database and extract it to $PASS_HOME_UNPACKED
-    close, c - encrypt database at $PASS_HOME_UNPACKED and save it to $ENCRYPTED_FILENAME
+    open, o - decrypt database and extract it to $pass_home_unpacked
+    close, c - encrypt database at $pass_home_unpacked and save it to $encrypted_fullpath
     dmenu, d - use dmenu to list, choose password and copy it to clipboard
     rofi, r - use rofi to list, choose password and copy it to clipboard
-    gen, g - generate pass of $GENLEN characters using zenity as prompt for new entry
+    gen, g - generate pass of $genlen characters using zenity as prompt for new entry
+    zensearch, zs - use pass' grep command and display result with zenity
     menu - show menu for action
 
   dmenu or rofi action parameters:
-    --type, -t, t - use xdotool to autotype password
+    --type, -t, t - use xte or xdotool to autotype password
     --show, -s, s - use zenity to show content
     --edit, -e, e - edit chosen entry with $EDITOR
-    --del,  -d, d - delete entry without warning
+    --del,  -d, d - delete entry
 
   Examples:
     $PROGRAM backup
@@ -123,7 +133,7 @@ usage: $PROGRAM [action]
     $PASSWORD_STORE_KEY
 
     encrypted password-store database:
-    $ENCRYPTED_FILENAME
+    $encrypted_fullpath
 
     editor:
     $EDITOR
@@ -135,9 +145,11 @@ if [[ $1 = @(-h|--help|-?) ]]; then
   exit $(( $# ? 0 : 1 ))
 fi
 
+zen_progress() { tee >(zenity --progress --auto-close --no-cancel --title="$(translate title)" --text "$(translate pass_running)" --pulsate) >&1 ;}
+
 die() {
-  if [[ -n $ZENEX ]]; then
-    zenity --error --no-markup --text "$@"
+  if [[ -n $zen_x ]]; then
+    zenity --error --no-markup --no-wrap --text "$@"
     exit 1
   else
     echo "$@" >&2
@@ -148,8 +160,8 @@ die() {
 [[ $(command -v pass) || $(command -v password-store) ]] || die "$(translate pass_req)"
 
 check_x() {
-  [[ $INX = 'yes' ]] || die "$(translate no_display)"
-  [[ $ZENEX != 'yes' && $check_zenity = 'yes' ]] && die "$(translate zenity_req)"
+  [[ $in_x = 'yes' ]] || die "$(translate no_display)"
+  [[ $zen_x != 'yes' && $check_zenity = 'yes' ]] && die "$(translate zenity_req)"
   [[ $(command -v rofi) || $(command -v dmenu) ]] || die "$(translate d_r_req)"
   if [[ -z $menu ]]; then
     [[ ($(command -v dmenu)) ]] && menu='dmenu'
@@ -166,80 +178,81 @@ zenity_editor () {
 export -f zenity_editor
 
 backup () {
-  if [[ -f "$ENCRYPTED_FILENAME" ]]; then
-    cp "$ENCRYPTED_FILENAME" "$BACKUPDIR"/"${PASS_HOME_BASENAME}_$DATE.tar.gpg" || die "$(translate error)"
+  if [[ -f "$encrypted_fullpath" ]]; then
+    cp "$encrypted_fullpath" "$backupdir"/"${dbname}_$curdate.tar.gpg" || die "$(translate error)"
   else
     die "$(translate bck_fail) \"$PROGRAM_ABS\""
   fi
 }
 
 tarcmd () {
-  if [[ -d "$PASS_HOME_UNPACKED" ]]; then
-    tar --preserve-permissions -C "$TMPDIR" --remove-files -c "$PASS_HOME_BASENAME" | \
-    gpg --encrypt -r "$PASSWORD_STORE_KEY" > "$ENCRYPTED_FILENAME" || die "$(translate error)"
+  if [[ -d "$pass_home_unpacked" ]]; then
+    tar --preserve-permissions -C "$tmpdir" --remove-files -c "$dbname" | \
+    gpg --encrypt -r "$PASSWORD_STORE_KEY" > "$encrypted_fullpath" || die "$(translate error)"
+    rm "$lockfile"
   else
     die "$(translate unp_dir_fail)"
   fi
 }
 
 untarcmd () {
-  if [[ -f "$ENCRYPTED_FILENAME" ]]; then
-    gpg -d "$ENCRYPTED_FILENAME" | tar -x --preserve-permissions -C "$TMPDIR"/ || die "$(translate error)"
+  [[ -f "$lockfile" ]] && die "$(translate lock_error)"
+
+  if [[ -f "$encrypted_fullpath" ]]; then
+    gpg -d "$encrypted_fullpath" | tar -x --preserve-permissions -C "$tmpdir"/ || die "$(translate error)"
+    touch "$lockfile"
   else
     die "$(translate enc_db_fail)"
   fi
 }
 
-deldb () {
-  rm -rf "$PASS_HOME_UNPACKED"
-  echo "$(translate no_changes)"
+no_changes () {
+  rm -rf "$pass_home_unpacked"
+  [[ -f "$lockfile" ]] && rm "$lockfile"
+  [[ -n $in_x ]] && notify-send pass "$(translate no_changes)" --icon=dialog-information \
+    || echo "$(translate no_changes)"
 }
 
 newdb () {
-  NEWDIR=${ENCRYPTED_FILENAME%.tar.gpg}
-  [[ ! -d "$NEWDIR" ]] && mkdir -p "$NEWDIR" || die "$(translate newdir_fail) $NEWDIR"
-  echo "$PASSWORD_STORE_KEY" > "$NEWDIR/.gpg-id"
-  chmod -R go-rwx "$NEWDIR" && \
-  tar --preserve-permissions -C "$PASS_HOME_DIRNAME" -c "$(basename $NEWDIR)" | \
-  gpg --encrypt -r "$PASSWORD_STORE_KEY" > "$ENCRYPTED_FILENAME" || die "$(translate error)"
-  rm --recursive "$NEWDIR" && \
-  echo "$ENCRYPTED_FILENAME $(translate newdb_created)"
+  newdir="$dbdir/$dbname"
+  [[ ! -d "$newdir" ]] && mkdir --mode=0700 --parents "$newdir" || die "$(translate newdir_fail) $newdir"
+  echo "$PASSWORD_STORE_KEY" > "$newdir/.gpg-id" && \
+  tar --preserve-permissions --directory="$dbdir" --create "$dbname" | \
+  gpg --encrypt --recipient "$PASSWORD_STORE_KEY" > "$encrypted_fullpath" || die "$(translate error)"
+  rm --recursive "$newdir" && \
+  echo "$encrypted_fullpath $(translate newdb_created)"
 }
 
 if [[ $1 = 'menu' ]]; then
   check_zenity='yes' check_x
 
-  ask=$(zenity $zenity_ask_size --list  --hide-header --text="$(translate what_todo)" --title "$(translate title)" --radiolist  --column "$(translate choose)" --column "$(translate action)" TRUE "$(translate type)" FALSE "$(translate show)" FALSE "$(translate add)" FALSE "$(translate edit)" FALSE "$(translate delete)" FALSE "$(translate make_bck)")
+  ask=$(zenity $zenity_ask_size --list  --hide-header --text="$(translate what_todo)" --title "$(translate title)" --radiolist  --column "$(translate choose)" --column "$(translate action)" TRUE "$(translate type)" FALSE "$(translate show)" FALSE "$(translate add)" FALSE "$(translate edit)" FALSE "$(translate delete)" FALSE "$(translate make_bck)" FALSE "$(translate search)")
 
   case $ask in
   "$(translate type)")
-    set $menu --type
-  ;;
+    set $menu --type ;;
 
   "$(translate show)")
-    set $menu --show
-  ;;
+    set $menu --show ;;
 
   "$(translate add)")
-    set gen
-  ;;
+    set gen ;;
 
   "$(translate edit)")
-    set $menu --edit
-  ;;
+    set $menu --edit ;;
 
   "$(translate delete)")
-    set $menu --del
-  ;;
-  
+    set $menu --del ;;
+
   "$(translate make_bck)")
     backup && \
-    notify-send pass "$BACKUPDIR/${PASS_HOME_BASENAME}_$DATE.tar.gpg $(translate bck_created)" --icon=dialog-information
-  ;;
+    notify-send pass "$backupdir/${dbname}_$curdate.tar.gpg $(translate bck_created)" --icon=dialog-information ;;
+
+  "$(translate search)")
+    set zensearch ;;
 
   *)
-    exit 0
-  ;;
+    exit 0 ;;
   esac
 fi
 
@@ -247,22 +260,28 @@ case $1 in
 
   backup | b)
     backup && \
-    echo -e " $BACKUPDIR/${PASS_HOME_BASENAME}_$DATE.tar.gpg $(translate bck_created)"
-  ;;
+    echo -e " $backupdir/${dbname}_$curdate.tar.gpg $(translate bck_created)" ;;
 
   open | o)
-    untarcmd
-  ;;
+    untarcmd ;;
 
   close | c)
-    tarcmd
-  ;;
+    tarcmd ;;
 
   gen | g)
     check_zenity='yes' check_x
-    newentry=$(zenity  --title "$(translate new_password)" --entry --text="$(translate no_spaces)") || exit 1
-    [[ -n $newentry ]] && "$PROGRAM_ABS" generate "$GENOPTS" "$newentry" $GENLEN &>/dev/null
+    newentry=$(zenity --title "$(translate new_password)" --entry --text="$(translate no_spaces)") || exit 1
+    newentry_fullpath="$tmpdir/$dbname/$newentry.gpg"
+    untarcmd && { [[ -f "$newentry_fullpath" ]] && new_exist='yes' ; tarcmd ;} || exit 1
+    [[ $new_exist == "yes" ]] && { unset $newentry && die "$(translate newentry_exist)" ;}
+    [[ -n $newentry ]] && "$PROGRAM_ABS" generate "$genopts" "$newentry" $genlen &>/dev/null
     notify-send pass "$(translate pass_generated) $newentry" -h string:sound-name:message-new-email --icon=document-new
+  ;;
+  zensearch | zs)
+    check_zenity='yes' check_x
+    search_entry=$(zenity --title "$(translate search_password)" --entry --text="$(translate search_entry)") || exit 1
+    search_output=$("$PROGRAM_ABS" grep "$search_entry" | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | zen_progress)
+    zenity --info --no-markup --no-wrap --title="$(translate search_result)" --text="$search_output"
   ;;
 
   rofi | dmenu | r | d)
@@ -274,74 +293,66 @@ case $1 in
       menu="dmenu_cmd"
     fi
     shopt -s nullglob globstar
-    export PASSWORD_STORE_DIR="$PASS_HOME_UNPACKED"
-    typeit=0
-    showit=0
-    editit=0
-    delit=0
+    export PASSWORD_STORE_DIR="$pass_home_unpacked"
     shift
 
-    if [[ $1 == "--type" || $1 == "-t" || $1 == "t" ]]; then
-      typeit=1
-      [[ $menu == rofi_cmd ]] && rofi_mesg="$(translate rofi_type_mesg)"
-      shift
-    fi
+    case "$1" in
+      --type | -t | t)
+        action='typeit' ; [[ $menu == rofi_cmd ]] && rofi_mesg="$(translate rofi_type_mesg)" ; shift ;;
 
-    if [[ $1 == "--show" || $1 == "-s" || $1 == "s" ]]; then
-      showit=1
-      [[ $menu == rofi_cmd ]] && rofi_mesg="$(translate rofi_show_mesg)"
-      shift
-    fi
+      --show | -s | s)
+        action='showit' ; [[ $menu == rofi_cmd ]] && rofi_mesg="$(translate rofi_show_mesg)" ; shift ;;
 
-    if [[ $1 == "--edit" || $1 == "-e" || $1 == "e" ]]; then
-      editit=1
-      [[ $menu == rofi_cmd ]] && rofi_mesg="$(translate rofi_edit_mesg)"
-      shift
-    fi
+      --edit | -e | e)
+        action='editit' ; [[ $menu == rofi_cmd ]] && rofi_mesg="$(translate rofi_edit_mesg)" ; shift ;;
 
-    if [[ $1 == "--del" || $1 == "-d" || $1 == "d" ]]; then
-      notify-send pass "$(translate del_pass_msg)" -h string:sound-name:message-new-email --icon=edit-clear
-      delit=1
-      [[ $menu == rofi_cmd ]] && rofi_mesg="$(translate rofi_del_mesg)"
-      shift
-    fi
+      --del | -d | d)
+        action='delit' ; notify-send pass "$(translate del_pass_msg)" -h string:sound-name:message-new-email --icon=edit-clear
+        [[ $menu == rofi_cmd ]] && rofi_mesg="$(translate rofi_del_mesg)" ; shift ;;
+    esac
 
-    "$PROGRAM_ABS" open
-    password_files=( "$PASSWORD_STORE_DIR"/**/*.gpg )
-    password_files=( "${password_files[@]#$PASSWORD_STORE_DIR/}" )
-    password_files=( "${password_files[@]%.gpg}" )
-    password=$(printf '%s\n' "${password_files[@]}" | sort -f | $menu "$@")
-    "$PROGRAM_ABS" close
+    untarcmd && \
+      { password_files=( "$PASSWORD_STORE_DIR"/**/*.gpg )
+      password_files=( "${password_files[@]#$PASSWORD_STORE_DIR/}" )
+      password_files=( "${password_files[@]%.gpg}" )
+      password=$(printf '%s\n' "${password_files[@]}" | sort -f | $menu "$@")
+      tarcmd; }
 
     [[ -n $password ]] || exit
 
-    if [[ $typeit -eq 0 && $showit -eq 0 && $editit -eq 0 && $delit -eq 0 ]]; then
-      "$PROGRAM_ABS" show -c "$password" 2>/dev/null
-    elif [[ $typeit -eq 1 ]] ;then
-      typepass=$("$PROGRAM_ABS" show "$password" | awk 'BEGIN{ORS=""} {print; exit}')
-      [[ ($(command -v xte)) ]] && xte "str $typepass" || \
-      ([[ ($(command -v xdotool)) ]] && xdotool type --clearmodifiers "$typepass" || die "$(translate xdt_xte_req)")
-      unset typepass
-    elif [[ $showit -eq 1 ]]; then
-      check_zenity='yes' check_x
-      "$PROGRAM_ABS" show "$password" | zenity $zenity_size --text-info --title="$password"
-    elif [[ $editit -eq 1 ]]; then
-      "$PROGRAM_ABS" edit "$password"
-    elif [[ $delit -eq 1 ]]; then
-      "$PROGRAM_ABS" rm -f "$password" &>/dev/null
-      notify-send pass "$password $(translate pass_deleted)" --icon=edit-delete
-    fi
+    case "$action" in
+      typeit)
+        typepass=$("$PROGRAM_ABS" show "$password" | awk 'BEGIN{ORS=""} {print; exit}')
+        [[ ($(command -v xte)) ]] && xte "str $typepass" || \
+          { [[ ($(command -v xdotool)) ]] && xdotool type --clearmodifiers "$typepass" || die "$(translate xdt_xte_req)"; }
+        unset typepass ;;
+
+      showit)
+        check_zenity='yes' check_x
+        "$PROGRAM_ABS" show "$password" | zenity $zenity_size --text-info --title="$password" ;;
+
+      editit)
+        "$PROGRAM_ABS" edit "$password" ;;
+
+      delit)
+        "$PROGRAM_ABS" rm -f "$password" &>/dev/null
+        notify-send pass "$password $(translate pass_deleted)" --icon=edit-delete ;;
+
+      *)
+        "$PROGRAM_ABS" show -c "$password" 2>/dev/null ;;
+    esac
   ;;
 
   *)
-    if [[ -f $ENCRYPTED_FILENAME ]]; then
-      export PASSWORD_STORE_DIR="$PASS_HOME_UNPACKED"
-      if [[ ! -d "$PASS_HOME_UNPACKED" ]]; then
+    if [[ -f "$encrypted_fullpath" ]]; then
+      export PASSWORD_STORE_DIR="$pass_home_unpacked"
+      if [[ ! -d "$pass_home_unpacked" ]]; then
         untarcmd
-        pass $@ && tarcmd || deldb
+        pass $@ && tarcmd || no_changes
       else
         pass $@
-        echo -e "$(translate db_unencrypted) \"$PROGRAM_ABS close\"."
+        [[ -n $in_x ]] && notify-send pass "$(translate db_unencrypted) \"$PROGRAM_ABS close\"" --icon=dialog-information \
+          || echo -e "$(translate db_unencrypted) \"$PROGRAM_ABS close\""
       fi
     else
       newdb
