@@ -5,7 +5,7 @@ shares some code from passmenu and possibly other scripts :)
 # Config and encrypt existing database
 You can find and edit config variables insdie the script. Basically you only need to edit PASSWORD_STORE_KEY variable if other settings were default ones. Other config entries are self-explanatory I hope. You can name this script whatever you want. Also it is probably a good idea to put in PATH and even bind keyboard shortcuts to actions.
 
-Empty encrypted database is created if there is no such at ENCRYPTED_FILENAME path (check source). 
+Empty encrypted database is created if there is no such at $encrypted_fullpath path (check source). 
 
 If you have existing pass tree, you should  
 1. Create empty encrypted db  
@@ -21,11 +21,12 @@ Then check config and usage of this wrapper with
 
 where `action` is:  
 `backup`, `b` - backup existing encrypted database  
-`open`, `o` - decrypt database and extract it to $PASS_HOME_UNPACKED  
-`close`, `c` - encrypt database at $PASS_HOME_UNPACKED and save it to $ENCRYPTED_FILENAME  
+`open`, `o` - decrypt database and extract it to $pass_home_unpacked  
+`close`, `c` - encrypt database at $pass_home_unpacked and save it to $encrypted_fullpath  
 `dmenu`, `d` - use dmenu to list, choose password and copy it to clipboard  
 `rofi`, `r` - use rofi to list, choose password and copy it to clipboard  
 `gen`, `g` - generate pass using zenity as prompt for new entry  
+`zensearch`, `zs` - use pass' grep command and display result with zenity 
 `menu` - show menu for action
 
 dmenu or rofi action parameters:  
