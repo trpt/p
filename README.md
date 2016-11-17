@@ -26,7 +26,7 @@ where `action` is:
 `dmenu`, `d` - use dmenu to list, choose password and copy it to clipboard  
 `rofi`, `r` - use rofi to list, choose password and copy it to clipboard  
 `gen`, `g` - generate pass using zenity as prompt for new entry  
-`zensearch`, `zs` - use pass' grep command and display result with zenity 
+`zensearch`, `zs` - use pass' grep command and display result with zenity  
 `menu` - show menu for action
 
 dmenu or rofi action parameters:  
