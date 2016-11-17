@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # pass wrapper by Trepet
-# v. 2.7
+# v. 2.7.1
 # © GPLv3
 
 # Path to the app, do not edit ##########
@@ -246,7 +246,7 @@ if [[ $1 = 'menu' ]]; then
 
   "$(translate make_bck)")
     backup && \
-    notify-send pass "$backupdir/${dbname}_$curdate.tar.gpg $(translate bck_created)" --icon=dialog-information ;;
+    notify-send pass "$backupdir/${dbname}_$curdate.tar.gpg $(translate bck_created)" --icon=dialog-information ; exit 0 ;;
 
   "$(translate search)")
     set zensearch ;;
