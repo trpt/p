@@ -29,6 +29,8 @@ where `action` is:
 `zensearch`, `zs` - use pass' grep command and display result with zenity  
 `menu` - show menu for action
 
+Other commands go to pass directly
+
 dmenu or rofi action parameters:  
 `--type`, `-t`, `t` - use xdotool to autotype password  
 `--show`, `-s`, `s` - use zenity to show content  
