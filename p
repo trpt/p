@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # pass wrapper by Trepet
-# v. 2.7.1
+# v. 2.8
 # © GPLv3
 
 # Path to the app, do not edit ##########
@@ -36,6 +36,10 @@ editor_console='nano'
 # Use minimal zenity editor instead of usual
 editor_x="zenity_editor"
 
+# Make auto-backup on every action if last backup was N days ago
+# Set to 0 to disable auto-backup feature
+auto_backup=7
+
 # Explicit choice of language, 'ru' and 'en' supported
 #lang='ru'
 
@@ -65,10 +69,12 @@ tmpdir='/dev/shm'
 # Delete trailing slashes in dbdir
 dbdir=$(echo "$dbdir" | sed 's:/*$::')
 
+# Auto-backup depends on this format
+curdate="$(date +%Y-%m-%d-%Hh)"
+
 encrypted_filename="$dbname.tar.gpg"
 encrypted_fullpath="$dbdir/$encrypted_filename"
 pass_home_unpacked="$tmpdir/$dbname"
-curdate="$(date +%Y-%m-%d-%Hh)"
 backupdir="$dbdir"
 lockfile="$tmpdir/.$dbname-passlock"
 [[ -n $DISPLAY ]] && in_x='yes'
@@ -110,7 +116,9 @@ usage: $PROGRAM [action]
     rofi, r - use rofi to list, choose password and copy it to clipboard
     gen, g - generate pass of $genlen characters using zenity as prompt for new entry
     zensearch, zs - use pass' grep command and display result with zenity
-    menu - show menu for action
+    menu - show zenity menu for action
+
+  Other commands go to pass directly
 
   dmenu or rofi action parameters:
     --type, -t, t - use xte or xdotool to autotype password
@@ -182,6 +190,13 @@ backup () {
     cp "$encrypted_fullpath" "$backupdir"/"${dbname}_$curdate.tar.gpg" || die "$(translate error)"
   else
     die "$(translate bck_fail) \"$PROGRAM_ABS\""
+  fi
+}
+
+autobackup () {
+  if (( $auto_backup > 0 )); then
+    local findbck=$(find "$backupdir" -maxdepth 1 -mtime -"${auto_backup}" -name "${dbname}_*h.tar.gpg" -type f)
+    [[ -z $findbck ]] && backup
   fi
 }
 
@@ -344,6 +359,7 @@ case $1 in
   ;;
 
   *)
+    autobackup
     if [[ -f "$encrypted_fullpath" ]]; then
       export PASSWORD_STORE_DIR="$pass_home_unpacked"
       if [[ ! -d "$pass_home_unpacked" ]]; then
