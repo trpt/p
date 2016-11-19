@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # pass wrapper by Trepet
-# v. 2.8
+# v. 2.8.1
 # © GPLv3
 
 # Path to the app, do not edit ##########
@@ -235,7 +235,8 @@ newdb () {
   tar --preserve-permissions --directory="$dbdir" --create "$dbname" | \
   gpg --encrypt --recipient "$PASSWORD_STORE_KEY" > "$encrypted_fullpath" || die "$(translate error)"
   rm --recursive "$newdir" && \
-  echo "$encrypted_fullpath $(translate newdb_created)"
+  echo "$encrypted_fullpath $(translate newdb_created)" && \
+  notify-send pass "$encrypted_fullpath $(translate newdb_created)" --icon=dialog-information
 }
 
 if [[ $1 = 'menu' ]]; then
@@ -359,9 +360,9 @@ case $1 in
   ;;
 
   *)
-    autobackup
     if [[ -f "$encrypted_fullpath" ]]; then
       export PASSWORD_STORE_DIR="$pass_home_unpacked"
+      autobackup
       if [[ ! -d "$pass_home_unpacked" ]]; then
         untarcmd
         pass $@ && tarcmd || no_changes
