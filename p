@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # pass wrapper by Trepet
-# v. 2.8.1
+# v. 2.8.2
 # © GPLv3
 
 # Path to the app, do not edit ##########
@@ -339,8 +339,8 @@ case $1 in
     case "$action" in
       typeit)
         typepass=$("$PROGRAM_ABS" show "$password" | awk 'BEGIN{ORS=""} {print; exit}')
-        [[ ($(command -v xte)) ]] && xte "str $typepass" || \
-          { [[ ($(command -v xdotool)) ]] && xdotool type --clearmodifiers "$typepass" || die "$(translate xdt_xte_req)"; }
+        [[ ($(command -v xdotool)) ]] && xdotool type --clearmodifiers "$typepass" || \
+          { [[ ($(command -v xte)) ]] && xte "str $typepass" || die "$(translate xdt_xte_req)"; }
         unset typepass ;;
 
       showit)
