@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # pass wrapper by Trepet
-# v. 2.8.2
+# v. 2.8.3
 # © GPLv3
 
 # Path to the app, do not edit ##########
@@ -50,7 +50,7 @@ auto_backup=7
 #menu='rofi'
 
 rofi_cmd () {
-  rofi -dmenu -i -color-window "#232832, #232832, #404552" -color-normal "#232832, #dddddd, #232832, #232832, #00CCFF" -color-active "#232832, #00b1ff, #232832, #232832, #00b1ff" -color-urgent "#232832, #ff1844, #232832, #232832, #ff1844" -opacity 90 -lines 15 -width -40 -font "mono 16" -no-levenshtein-sort -disable-history -p pass: -mesg "$rofi_mesg"
+  rofi -dmenu -i -color-window "argb:f22d303b, argb:07c8389, #1d1f21" -color-normal "argb:0000000, #c4cbd4, argb:0404552, #4084d6, #f9f9f9" -color-active "argb:01d1f21, #65acff, argb:04b5160, #4491ed, #f9f9f9" -color-urgent "argb:01d1f21, #cc6666, argb:04b5160, #a54242, #f9f9f9" -lines 15 -width -40 -font "monospace 16" -no-levenshtein-sort -disable-history -p pass: -mesg "$rofi_mesg"
 }
 
 dmenu_cmd () {
