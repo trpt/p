@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # pass wrapper by Trepet
-# v. 2.8.3
+# v. 2.9
 # © GPLv3
 
 # Path to the app, do not edit ##########
@@ -9,6 +9,9 @@ SCR="$( cd "$(dirname "$0")" ; pwd -P )"
 PROGRAM="${0##*/}"
 PROGRAM_ABS="$SCR/$PROGRAM"
 #########################################
+
+## General options
+## You can override these with environment variables with 'psw_' prefix, like 'psw_GNUPGHOME', 'psw_dbname' etc.
 
 # GPG keys and config homedir
 GNUPGHOME="$HOME/.gnupg"
@@ -49,19 +52,26 @@ auto_backup=7
 #menu='dmenu'
 #menu='rofi'
 
+# Appearance
+zenity_size="--width=600 --height=400"
+zenity_ask_size="--height=340 "
+rofi_font='monospace 16'
+rofi_lines='15'
+rofi_width='-40'
+
 rofi_cmd () {
-  rofi -dmenu -i -color-window "argb:f22d303b, argb:07c8389, #1d1f21" -color-normal "argb:0000000, #c4cbd4, argb:0404552, #4084d6, #f9f9f9" -color-active "argb:01d1f21, #65acff, argb:04b5160, #4491ed, #f9f9f9" -color-urgent "argb:01d1f21, #cc6666, argb:04b5160, #a54242, #f9f9f9" -lines 15 -width -40 -font "monospace 16" -no-levenshtein-sort -disable-history -p pass: -mesg "$rofi_mesg"
+  rofi -dmenu -i -color-window "argb:f22d303b, argb:07c8389, #1d1f21" -color-normal "argb:0000000, #c4cbd4, argb:0404552, #4084d6, #f9f9f9" -color-active "argb:01d1f21, #65acff, argb:04b5160, #4491ed, #f9f9f9" -color-urgent "argb:01d1f21, #cc6666, argb:04b5160, #a54242, #f9f9f9" -lines "$rofi_lines" -width "$rofi_width" -font "$rofi_font" -no-levenshtein-sort -disable-history -p pass: -mesg "$rofi_mesg"
 }
 
 dmenu_cmd () {
   dmenu -l 20 -b -nb \#222222 -nf \#ffffff -sb \#222222 -sf \#11dd11 $@
 }
 
-zenity_size="--width=600 --height=400"
-zenity_ask_size="--height=340 "
-
 # You usually don't need to edit anything below this line #
 ###########################################################
+
+# Check environment for custom options
+[[ -n $psw_GNUPGHOME ]] && GNUPGHOME="$psw_GNUPGHOME" ; [[ -n $psw_PASSWORD_STORE_KEY ]] && PASSWORD_STORE_KEY="$psw_PASSWORD_STORE_KEY" ; [[ -n $psw_dbname ]] && dbname="$psw_dbname" ; [[ -n $psw_dbdir ]] && dbdir="$psw_dbdir" ; [[ -n $psw_genopts ]] && genopts="$psw_genopts" ; [[ -n $psw_genlen ]] && genlen="$psw_genlen" ; [[ -n $psw_custom_editor ]] && custom_editor="$psw_custom_editor" ; [[ -n $psw_editor_x ]] && editor_x="$psw_editor_x" ; [[ -n $psw_editor_console ]] && editor_console="$psw_editor_console" ; [[ -n $psw_auto_backup ]] && auto_backup="$psw_auto_backup" ; [[ -n $psw_lang ]] && lang="$psw_lang" ; [[ -n $psw_menu ]] && menu="$psw_menu" ; [[ -n $psw_zenity_size ]] && zenity_size="$psw_zenity_size" ; [[ -n $psw_zenity_ask_size ]] && zenity_ask_size="$psw_zenity_ask_size" ; [[ -n $psw_rofi_font ]] && rofi_font="$psw_rofi_font" ; [[ -n $psw_rofi_lines ]] && rofi_lines="$psw_rofi_lines" ; [[ -n $psw_rofi_width ]] && rofi_width="$psw_rofi_width"
 
 # Dir to unpack database. It SHOULD be in RAM
 tmpdir='/dev/shm'
@@ -84,6 +94,7 @@ if [[ $custom_editor = 'yes' ]]; then
   [[ -n $in_x ]] && export EDITOR="$editor_x" || export EDITOR="$editor_console"
 fi
 
+# Internationalizaion
 translate() {
   [[ -z $lang ]] && lang=${LANG:0:2}
 
