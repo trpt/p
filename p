@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # pass wrapper by Trepet
-# v. 2.9
+# v. 2.9.3
 # © GPLv3
 
 # Path to the app, do not edit ##########
@@ -60,7 +60,7 @@ rofi_lines='15'
 rofi_width='-40'
 
 rofi_cmd () {
-  rofi -dmenu -i -color-window "argb:f22d303b, argb:07c8389, #1d1f21" -color-normal "argb:0000000, #c4cbd4, argb:0404552, #4084d6, #f9f9f9" -color-active "argb:01d1f21, #65acff, argb:04b5160, #4491ed, #f9f9f9" -color-urgent "argb:01d1f21, #cc6666, argb:04b5160, #a54242, #f9f9f9" -lines "$rofi_lines" -width "$rofi_width" -font "$rofi_font" -no-levenshtein-sort -disable-history -p pass: -mesg "$rofi_mesg"
+  rofi -dmenu -i -color-window "argb:f22d303b, argb:07c83890, #1d1f21" -color-normal "argb:00000000, #c4cbd4, argb:04045520, #4084d6, #f9f9f9" -color-active "argb:01d1f210, #65acff, argb:04b51600, #4491ed, #f9f9f9" -color-urgent "argb:01d1f210, #cc6666, argb:04b51600, #a54242, #f9f9f9" -lines "$rofi_lines" -width "$rofi_width" -font "$rofi_font" -no-levenshtein-sort -disable-history -p pass: -mesg "$rofi_mesg"
 }
 
 dmenu_cmd () {
@@ -71,7 +71,7 @@ dmenu_cmd () {
 ###########################################################
 
 # Check environment for custom options
-[[ -n $psw_GNUPGHOME ]] && GNUPGHOME="$psw_GNUPGHOME" ; [[ -n $psw_PASSWORD_STORE_KEY ]] && PASSWORD_STORE_KEY="$psw_PASSWORD_STORE_KEY" ; [[ -n $psw_dbname ]] && dbname="$psw_dbname" ; [[ -n $psw_dbdir ]] && dbdir="$psw_dbdir" ; [[ -n $psw_genopts ]] && genopts="$psw_genopts" ; [[ -n $psw_genlen ]] && genlen="$psw_genlen" ; [[ -n $psw_custom_editor ]] && custom_editor="$psw_custom_editor" ; [[ -n $psw_editor_x ]] && editor_x="$psw_editor_x" ; [[ -n $psw_editor_console ]] && editor_console="$psw_editor_console" ; [[ -n $psw_auto_backup ]] && auto_backup="$psw_auto_backup" ; [[ -n $psw_lang ]] && lang="$psw_lang" ; [[ -n $psw_menu ]] && menu="$psw_menu" ; [[ -n $psw_zenity_size ]] && zenity_size="$psw_zenity_size" ; [[ -n $psw_zenity_ask_size ]] && zenity_ask_size="$psw_zenity_ask_size" ; [[ -n $psw_rofi_font ]] && rofi_font="$psw_rofi_font" ; [[ -n $psw_rofi_lines ]] && rofi_lines="$psw_rofi_lines" ; [[ -n $psw_rofi_width ]] && rofi_width="$psw_rofi_width"
+[[ -n $psw_GNUPGHOME ]] && export GNUPGHOME="$psw_GNUPGHOME" ; [[ -n $psw_PASSWORD_STORE_KEY ]] && export PASSWORD_STORE_KEY="$psw_PASSWORD_STORE_KEY" ; [[ -n $psw_dbname ]] && dbname="$psw_dbname" ; [[ -n $psw_dbdir ]] && dbdir="$psw_dbdir" ; [[ -n $psw_genopts ]] && genopts="$psw_genopts" ; [[ -n $psw_genlen ]] && genlen="$psw_genlen" ; [[ -n $psw_custom_editor ]] && custom_editor="$psw_custom_editor" ; [[ -n $psw_editor_x ]] && editor_x="$psw_editor_x" ; [[ -n $psw_editor_console ]] && editor_console="$psw_editor_console" ; [[ -n $psw_auto_backup ]] && auto_backup="$psw_auto_backup" ; [[ -n $psw_lang ]] && lang="$psw_lang" ; [[ -n $psw_menu ]] && menu="$psw_menu" ; [[ -n $psw_zenity_size ]] && zenity_size="$psw_zenity_size" ; [[ -n $psw_zenity_ask_size ]] && zenity_ask_size="$psw_zenity_ask_size" ; [[ -n $psw_rofi_font ]] && rofi_font="$psw_rofi_font" ; [[ -n $psw_rofi_lines ]] && rofi_lines="$psw_rofi_lines" ; [[ -n $psw_rofi_width ]] && rofi_width="$psw_rofi_width"
 
 # Dir to unpack database. It SHOULD be in RAM
 tmpdir='/dev/shm'
@@ -213,8 +213,13 @@ autobackup () {
 
 tarcmd () {
   if [[ -d "$pass_home_unpacked" ]]; then
+    if [[ -n $PASSWORD_STORE_KEY ]]; then
+      for gpg_id in $PASSWORD_STORE_KEY; do
+        GPG_RECIPIENT_ARGS+=( "-r" "$gpg_id" )
+      done
+    fi
     tar --preserve-permissions -C "$tmpdir" --remove-files -c "$dbname" | \
-    gpg --encrypt -r "$PASSWORD_STORE_KEY" > "$encrypted_fullpath" || die "$(translate error)"
+      gpg --encrypt "${GPG_RECIPIENT_ARGS[@]}" > "$encrypted_fullpath" || die "$(translate error)"
     rm "$lockfile"
   else
     die "$(translate unp_dir_fail)"
@@ -243,11 +248,11 @@ newdb () {
   newdir="$dbdir/$dbname"
   [[ ! -d "$newdir" ]] && mkdir --mode=0700 --parents "$newdir" || die "$(translate newdir_fail) $newdir"
   echo "$PASSWORD_STORE_KEY" > "$newdir/.gpg-id" && \
-  tar --preserve-permissions --directory="$dbdir" --create "$dbname" | \
-  gpg --encrypt --recipient "$PASSWORD_STORE_KEY" > "$encrypted_fullpath" || die "$(translate error)"
+    tar --preserve-permissions --directory="$dbdir" --create "$dbname" | \
+      gpg --encrypt --recipient "$PASSWORD_STORE_KEY" > "$encrypted_fullpath" || die "$(translate error)"
   rm --recursive "$newdir" && \
-  echo "$encrypted_fullpath $(translate newdb_created)" && \
-  notify-send pass "$encrypted_fullpath $(translate newdb_created)" --icon=dialog-information
+    echo "$encrypted_fullpath $(translate newdb_created)" && \
+      notify-send pass "$encrypted_fullpath $(translate newdb_created)" --icon=dialog-information
 }
 
 if [[ $1 = 'menu' ]]; then
@@ -287,7 +292,7 @@ case $1 in
 
   backup | b)
     backup && \
-    echo -e " $backupdir/${dbname}_$curdate.tar.gpg $(translate bck_created)" ;;
+      echo -e " $backupdir/${dbname}_$curdate.tar.gpg $(translate bck_created)" ;;
 
   open | o)
     untarcmd ;;
